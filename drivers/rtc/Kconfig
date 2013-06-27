@@ -1044,7 +1044,7 @@ config RTC_DRV_GENERIC
 
 config RTC_DRV_PXA
        tristate "PXA27x/PXA3xx"
-       depends on ARCH_PXA
+       depends on (ARCH_PXA || ARCH_MMP)
        help
          If you say Y here you will get access to the real time clock
          built into your PXA27x or PXA3xx CPU.

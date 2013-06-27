@@ -14,6 +14,7 @@ extern void pxa168_clear_keypad_wakeup(void);
 #include <linux/platform_data/keypad-pxa27x.h>
 #include <mach/cputype.h>
 #include <linux/pxa168_eth.h>
+#include <linux/platform_data/pxa_sdhci.h>
 #include <linux/platform_data/mv_usb.h>
 
 extern struct pxa_device_desc pxa168_device_uart1;
@@ -34,6 +35,25 @@ extern struct pxa_device_desc pxa168_device_nand;
 extern struct pxa_device_desc pxa168_device_fb;
 extern struct pxa_device_desc pxa168_device_keypad;
 extern struct pxa_device_desc pxa168_device_eth;
+extern struct pxa_device_desc pxa168_device_sdh1;
+extern struct pxa_device_desc pxa168_device_sdh2;
+extern struct pxa_device_desc pxa168_device_sdh3;
+extern struct pxa_device_desc pxa168_device_sdh4;
+
+extern struct platform_device pxa168_device_u2o;
+extern struct platform_device pxa168_device_u2h;
+extern struct platform_device pxa168_device_u2oehci;
+extern struct platform_device pxa168_device_u2ootg;
+extern struct pxa_device_desc pxa168_device_fb_ovly;
+extern struct pxa_device_desc pxa168_device_onenand;
+extern struct pxa_device_desc pxa168_device_pcie;
+extern struct platform_device pxa168_device_freq;
+extern struct platform_device pxa168_device_cir;
+extern struct pxa_device_desc pxa168_device_camera;
+extern struct pxa_device_desc pxa168_device_ov529;
+extern struct pxa_device_desc pxa168_device_msp;
+extern struct pxa_device_desc pxa168_device_cf;
+extern struct pxa_device_desc pxa168_device_icr;
 
 /* pdata can be NULL */
 extern int __init pxa168_add_usb_host(struct mv_usb_platform_data *pdata);
@@ -119,6 +139,23 @@ static inline int pxa168_add_fb(struct pxa168fb_mach_info *mi)
 	return pxa_register_device(&pxa168_device_fb, mi, sizeof(*mi));
 }
 
+static inline int pxa168_add_fb_ovly(struct pxa168fb_mach_info *mi)
+{
+	return pxa_register_device(&pxa168_device_fb_ovly, mi, sizeof(*mi));
+}
+
+static inline int pxa168_add_cam(void)
+{
+	return pxa_register_device(&pxa168_device_camera, NULL, 0);
+}
+
+#if 0
+static inline int pxa168_add_ov529(struct ov529_platform_data *pd)
+{
+	return pxa_register_device(&pxa168_device_ov529, pd, sizeof(*pd));
+}
+#endif
+
 static inline int pxa168_add_keypad(struct pxa27x_keypad_platform_data *data)
 {
 	if (cpu_is_pxa168())
@@ -130,5 +167,20 @@ static inline int pxa168_add_keypad(struct pxa27x_keypad_platform_data *data)
 static inline int pxa168_add_eth(struct pxa168_eth_platform_data *data)
 {
 	return pxa_register_device(&pxa168_device_eth, data, sizeof(*data));
+}
+
+static inline int pxa168_add_sdh(int id, struct sdhci_pxa_platdata *data)
+{
+	struct pxa_device_desc *d = NULL;
+
+	switch (id) {
+	case 1: d = &pxa168_device_sdh1; break;
+	case 2: d = &pxa168_device_sdh2; break;
+	case 3: d = &pxa168_device_sdh3; break;
+	case 4: d = &pxa168_device_sdh4; break;
+	default:
+		return -EINVAL;
+	}
+	return pxa_register_device(d, data, sizeof(*data));
 }
 #endif /* __ASM_MACH_PXA168_H */

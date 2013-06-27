@@ -108,8 +108,22 @@ PXA168_DEVICE(ssp3, "pxa168-ssp", 2, SSP3, 0xd401f000, 0x40, 56, 57);
 PXA168_DEVICE(ssp4, "pxa168-ssp", 3, SSP4, 0xd4020000, 0x40, 58, 59);
 PXA168_DEVICE(ssp5, "pxa168-ssp", 4, SSP5, 0xd4021000, 0x40, 60, 61);
 PXA168_DEVICE(fb, "pxa168-fb", -1, LCD, 0xd420b000, 0x1c8);
+PXA168_DEVICE(fb_ovly, "pxa168fb_ovly", -1, LCD, 0xd420b000, 0x1c8);
 PXA168_DEVICE(keypad, "pxa27x-keypad", -1, KEYPAD, 0xd4012000, 0x4c);
 PXA168_DEVICE(eth, "pxa168-eth", -1, MFU, 0xc0800000, 0x0fff);
+PXA168_DEVICE(sdh1, "sdhci-pxav2", 0, SDH1, 0xd4280000, 0x100);
+PXA168_DEVICE(sdh2, "sdhci-pxav2", 1, SDH1, 0xd4281000, 0x100);
+PXA168_DEVICE(sdh3, "sdhci-pxav2", 2, SDH2, 0xd427e000, 0x100);
+PXA168_DEVICE(sdh4, "sdhci-pxav2", 3, SDH2, 0xd427f000, 0x100);
+PXA168_DEVICE(cf, "pxa168-cf", -1, CF, 0xd4285000, 0x800);	/*Compact Flash*/
+PXA168_DEVICE(onenand, "onenand", -1, NONE, 0x80000000, 0x100000);	/*NOR Flash*/
+/*PXA168_DEVICE(pcie, "pxa168-pcie", -1, PCIE_CORE, 0xd1200000, 0x0FFF);*/	/*PCIe DMA*/
+PXA168_DEVICE(camera, "pxa168-camera", -1, CI, 0xd420a000, 0xfff);
+PXA168_DEVICE(ov529, "pxa168-ov529", -1, NONE, SMC_CS0_PHYS_BASE, 0x100); /*NOR Flash PHY Base*/
+PXA168_DEVICE(msp, "pxa168-msp", -1, MSP, 0xd4286000, 0x0FFF);	/*MS/MSPRO Memory Stick*/
+/*PXA168_DEVICE(icr, "pxa168-icr", -1, ICR, 0xC0802000, 0x1000);*/	/*CMU Color Management Unit*/
+
+/***********/
 
 struct resource pxa168_resource_gpio[] = {
 	{
