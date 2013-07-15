@@ -111,7 +111,24 @@ static int pxav2_mmc_set_width(struct sdhci_host *host, int width)
 	return 0;
 }
 
+/*
+ * we cannot talk to controller for 8 bus cycles according to sdio spec
+ * at lowest speed this is 100,000 HZ per cycle or 800,000 cycles
+ * which is quite a LONG TIME on a fast cpu -- so delay if needed
+ */
+static inline u16 pxa168_readw(struct sdhci_host *host, int reg)
+{
+	u32 temp;
+	if (reg == SDHCI_HOST_VERSION) {
+		temp = readl (host->ioaddr + SDHCI_HOST_VERSION - 2) >> 16;
+		return temp & 0xffff;
+	}
+
+	return readw(host->ioaddr + reg);
+}
+
 static const struct sdhci_ops pxav2_sdhci_ops = {
+	.read_w = &pxa168_readw,
 	.get_max_clock = sdhci_pltfm_clk_get_max_clock,
 	.platform_reset_exit = pxav2_set_private_registers,
 	.platform_bus_width = pxav2_mmc_set_width,

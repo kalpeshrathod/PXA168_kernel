@@ -12,9 +12,14 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/gpio-pxa.h>
+#include <linux/mmc/sdhci.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/pxa2xx_spi.h>
+#include <linux/delay.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <asm/system.h>
 
 #include <mach/irqs.h>
 #include <mach/pxa168.h>
@@ -133,7 +138,30 @@ static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
 	.irq_base	= MMP_GPIO_TO_IRQ(0),
 };
 
+#if 0
+static unsigned long mmc4_pin_config[] __initdata = {
+	GPIO125_MMC4_DAT3,
+	GPIO126_MMC4_DAT2,
+	GPIO127_MMC4_DAT1,
+	GPIO0_2_MMC4_DAT0,
+	GPIO1_2_MMC4_CMD,
+	GPIO2_2_MMC4_CLK,
+	GPIO113_GPIO
+};
+#endif
+static struct i2c_pxa_platform_data i2c_info __initdata = {
+	.use_pio	= 1,
+};
+
 static struct i2c_board_info gplugd_i2c_board_info[] = {
+	{
+		.type = "tda998X",
+		.addr = 0x70,
+	},
+	{
+		.type = "tda99Xcec",
+		.addr = 0x34,
+	},
 	{
 		.type = "isl1208",
 		.addr = 0x6F,
@@ -161,6 +189,10 @@ struct pxa168_eth_platform_data gplugd_eth_platform_data = {
 	.init        = gplugd_eth_init,
 };
 
+struct sdhci_pxa_platdata gplugd_sdh_platdata = {
+	.quirks = SDHCI_QUIRK_NO_HISPD_BIT | SDHCI_QUIRK_NO_BUSY_IRQ | SDHCI_QUIRK_32BIT_DMA_SIZE,
+};
+
 static void __init select_disp_freq(void)
 {
 	/* set GPIO 35 & clear GPIO 85 to set LCD External Clock to 74.25 MHz */
@@ -181,21 +213,198 @@ static void __init select_disp_freq(void)
 	}
 }
 
+#ifdef CONFIG_USB_SUPPORT
+
+#if defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_EHCI_MV)
+
+static char *pxa168_u2h_clock_name[] = {
+	[0] = "U2HCLK",
+};
+
+static struct mv_usb_platform_data pxa168_u2h_pdata = {
+	/*.clknum         = 1,
+	.clkname        = pxa168_u2h_clock_name,*/
+	.mode           = MV_USB_MODE_HOST,
+	.phy_init       = pxa_usb_phy_init,
+	.phy_deinit     = pxa_usb_phy_deinit,
+	.set_vbus       = NULL,
+};
+#endif
+
+#if defined(CONFIG_USB_MV_UDC) || defined(CONFIG_USB_EHCI_MV_U2O)
+static char *pxa168_u2o_clock_name[] = {
+	[0] = "U2OCLK",
+};
+
+static struct mv_usb_platform_data pxa168_u2o_udc_pdata = {
+	/*.clknum			= 1,
+	.clkname		= pxa168_u2o_clock_name,*/
+	.vbus			= NULL,
+	.mode			= MV_USB_MODE_OTG,
+	.otg_force_a_bus_req	= 1,
+	.phy_init		= pxa_usb_phy_init,
+	.phy_deinit		= pxa_usb_phy_deinit,
+	.set_vbus		= NULL,
+};
+static struct mv_usb_platform_data pxa168_u2o_pdata = {
+	/*.clknum			= 1,
+	.clkname		= pxa168_u2o_clock_name,*/
+	.vbus			= NULL,
+	.mode			= MV_USB_MODE_OTG,
+	.otg_force_a_bus_req	= 1,
+	.phy_init		= pxa_usb_phy_init,
+	.phy_deinit		= pxa_usb_phy_deinit,
+	.set_vbus		= NULL,
+};
+static struct mv_usb_platform_data pxa168_u2o_otg_pdata = {
+	/*.clknum			= 1,
+	.clkname		= pxa168_u2o_clock_name,*/
+	.vbus			= NULL,
+	.mode			= MV_USB_MODE_OTG,
+	.otg_force_a_bus_req	= 1,
+	.phy_init		= pxa_usb_phy_init,
+	.phy_deinit		= pxa_usb_phy_deinit,
+	/*.set_vbus		= gplugd_u2o_vbus_set,*/
+	.set_vbus		= NULL,
+};
+
+#endif
+#endif
+
+static struct pxa2xx_spi_master pxa_ssp_master_info = {
+	.num_chipselect	= 1,
+	.enable_dma = 1,
+};
+
+static struct pxa2xx_spi_chip AT45DB041D_spi_info = {
+	.tx_threshold = 1,
+	.rx_threshold = 1,
+	.timeout = 1000,
+	.gpio_cs = 110
+};
+
+static struct spi_board_info __initdata gplugD_spi_board_info[] = {
+	{
+		.modalias = "mtd_dataflash",
+		.mode = SPI_MODE_0,
+		.max_speed_hz = 260000,
+		.bus_num = 2,
+		.chip_select = 0,
+		.platform_data = NULL,
+		.controller_data = &AT45DB041D_spi_info,
+		.irq = -1,
+	},
+};
+
+static inline int pxa168_add_spi(int id, struct pxa2xx_spi_master *pdata)
+{
+	struct platform_device *pd;
+
+	pd = platform_device_alloc("pxa2xx-spi", id);
+	if (pd == NULL) {
+		pr_err("pxa2xx-spi: failed to allocate device (id=%d)\n", id);
+		return -ENOMEM;
+	}
+
+	platform_device_add_data(pd, pdata, sizeof(*pdata));
+
+	return platform_device_add(pd);
+}
+
+static void __init read_store_mac_addr(void)
+{
+	int i;
+	u8 *mac_addr = gplugd_eth_platform_data.mac_addr;
+
+	/* gplugD uses serial number tag to pass MAC address */
+	*mac_addr++ = (system_serial_high >> 8) & 0xff;
+	*mac_addr++ = system_serial_high & 0xff;
+
+	for (i = 3; i >= 0; i--)
+		*mac_addr++ = (system_serial_low >> i*8) & 0xff;
+	/*printk(KERN_NOTICE "mac-address at gplugd.c is ");
+	for(i = 0; i < 6; i++)
+		printk(KERN_NOTICE "%c:", (pxa168_eth_data.mac_addr[i]));
+	for(i = 0; i < 6; i++)
+		printk(KERN_NOTICE "%d:", (pxa168_eth_data.mac_addr[i]));*/
+}
+
+static struct fb_videomode video_modes[] = {
+	/* TDA9989 Video Mode */
+	[0] = {
+		.pixclock	= 13468,
+		.refresh	= 60,
+		.xres		= 1280,
+		.yres		= 720,
+		.hsync_len	= 40,
+		.left_margin	= 220,
+		.right_margin	= 110,
+		.vsync_len	= 5,
+		.upper_margin	= 20,
+		.lower_margin	= 5,
+		.sync		= 0,
+	},
+};
+
+static struct pxa168fb_mach_info tda9981_hdmi_info __initdata = {
+	.id			= "tda9981",
+	.modes			= video_modes,
+	.num_modes		= ARRAY_SIZE(video_modes),
+	.pix_fmt		= PIX_FMT_RGB565,
+	.io_pin_allocation_mode	= PIN_MODE_DUMB_24,
+	.dumb_mode		= DUMB_MODE_RGB888,
+	.active			= 1,
+	.panel_rbswap		= 1,
+	.invert_pixclock	= 0,
+	.max_fb_size	    = (1280 * 720 * 4),
+};
+
 static void __init gplugd_init(void)
 {
 	mfp_config(ARRAY_AND_SIZE(gplugd_pin_config));
+	platform_device_add_data(&pxa168_device_gpio, &pxa168_gpio_pdata,
+				 sizeof(struct pxa_gpio_platform_data));
+	platform_device_register(&pxa168_device_gpio);
 
 	select_disp_freq();
 
 	/* on-chip devices */
 	pxa168_add_uart(3);
 	pxa168_add_ssp(1);
-	pxa168_add_twsi(0, NULL, ARRAY_AND_SIZE(gplugd_i2c_board_info));
-	platform_device_add_data(&pxa168_device_gpio, &pxa168_gpio_pdata,
-				 sizeof(struct pxa_gpio_platform_data));
-	platform_device_register(&pxa168_device_gpio);
+	/*pxa168_add_twsi(0, NULL, ARRAY_AND_SIZE(gplugd_i2c_board_info));*/
+	pxa168_add_twsi(0, &i2c_info, ARRAY_AND_SIZE(gplugd_i2c_board_info));
+
+	read_store_mac_addr();
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
+	pxa168_add_sdh(1, &gplugd_sdh_platdata);
+	pxa168_add_sdh(2, &gplugd_sdh_platdata);
+
+#if defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_EHCI_MV)
+	pxa168_device_u2h.dev.platform_data = &pxa168_u2h_pdata;
+	platform_device_register(&pxa168_device_u2h);
+#endif
+#ifdef CONFIG_USB_MV_UDC
+	pxa168_device_u2o.dev.platform_data = &pxa168_u2o_udc_pdata;
+	platform_device_register(&pxa168_device_u2o);
+#endif
+
+#ifdef CONFIG_USB_EHCI_MV_U2O
+	pxa168_device_u2oehci.dev.platform_data = &pxa168_u2o_pdata;
+	platform_device_register(&pxa168_device_u2oehci);
+#endif
+
+#if 0
+#ifdef CONFIG_USB_MV_OTG
+	pxa168_device_u2ootg.dev.platform_data = &pxa168_u2o_otg_pdata;
+	platform_device_register(&pxa168_device_u2ootg);
+#endif
+#endif
+	pxa168_add_ssp(2);
+	pxa168_add_spi(2, &pxa_ssp_master_info);
+	spi_register_board_info(gplugD_spi_board_info, ARRAY_SIZE(gplugD_spi_board_info));
+	pxa168_add_fb(&tda9981_hdmi_info);
+	pxa168_add_fb_ovly(&tda9981_hdmi_info);
 }
 
 MACHINE_START(GPLUGD, "PXA168-based GuruPlug Display (gplugD) Platform")

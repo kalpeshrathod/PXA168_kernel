@@ -662,7 +662,7 @@ void __init pxa168_clk_init(void)
 
 	clk = mmp_clk_register_apbc("gpio", "vctcxo",
 				apbc_base + APBC_GPIO, 10, 0, &clk_lock);
-	clk_register_clkdev(clk, NULL, "pxa-gpio");
+	clk_register_clkdev(clk, NULL, "mmp-gpio");
 
 	clk = mmp_clk_register_apbc("kpc", "clk32",
 				apbc_base + APBC_KPC, 10, 0, &clk_lock);
@@ -798,13 +798,24 @@ void __init pxa168_clk_init(void)
 	clk_register_clkdev(clk, "sph_clk", NULL);
 #endif
 
-	clk = mmp_clk_register_apmu("sph", "U2HCLK", apmu_base + APMU_USB,
+	/*clk = mmp_clk_register_apmu("sph", "U2HCLK", apmu_base + APMU_USB,
 				0x12, &clk_lock);
 	clk_register_clkdev(clk, "U2HCLK", NULL);
 
 	clk = mmp_clk_register_apmu("usb", "U2OCLK", apmu_base + APMU_USB,
 				0x09, &clk_lock);
-	clk_register_clkdev(clk, "U2OCLK", NULL);
+	clk_register_clkdev(clk, "U2OCLK", NULL);*/
+
+	clk = mmp_clk_register_apmu("sph", "pxa-sph", apmu_base + APMU_USB,
+				0x12, &clk_lock);
+	/*clk_register_clkdev(clk, "pxa-sph", NULL);*/
+	clk_register_clkdev(clk, NULL, "pxa-sph");
+
+	clk = mmp_clk_register_apmu("usb", "pxa-u2oehci", apmu_base + APMU_USB,
+				0x09, &clk_lock);
+	/*clk_register_clkdev(clk, "pxa-u2oehci", NULL);*/
+	clk_register_clkdev(clk, NULL, "pxa-u2oehci");
+
 
 #if 0
 	/*Check USB clock start*/
