@@ -50,6 +50,9 @@
 #include <../omap2/dss/dss.h>
 #endif
 
+/*static function declarations*/
+void reset_hdmi(int hdcp_module);
+
 /*
  *
  * DEFINITION
@@ -1253,6 +1256,9 @@ static void interrupt_polling(struct work_struct *dummy)
 
 	/* FIX : IT anti debounce */
 	TRY(tx_handle_interrupt(this->tda.instance));
+
+	/*Reset HDMI on unplug event*/
+	reset_hdmi(0);
 
 TRY_DONE:
 
