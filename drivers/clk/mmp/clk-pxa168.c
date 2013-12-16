@@ -864,6 +864,8 @@ void __init pxa168_clk_init(void)
 		/*Check USB clock End*/
 #endif
 
+#if 0
+
 	/*clk = clk_register_mux(NULL, "disp0_mux", disp_parent,*/
 	clk = clk_register_mux(NULL, "LCDCLK", disp_parent,
 				ARRAY_SIZE(disp_parent), CLK_SET_RATE_PARENT,
@@ -876,6 +878,60 @@ void __init pxa168_clk_init(void)
 				apmu_base + APMU_DISP0, 0x7f, &clk_lock);
 				/*apmu_base + APMU_DISP0, 0x1b, &clk_lock);*/
 	clk_register_clkdev(clk, NULL, "pxa168-fb");
+#else
+#if 1
+#if 1
+	clk = clk_register_mux(NULL, "disp0_mux", disp_parent,
+                                ARRAY_SIZE(disp_parent),
+                                CLK_SET_RATE_PARENT,
+                                apmu_base + APMU_DISP0, 0, 7, 0, &clk_lock);
+        clk_register_clkdev(clk, "disp_mux.0", NULL);
+
+        clk = mmp_clk_register_apmu("disp0", "disp0_mux",
+                                apmu_base + APMU_DISP0, 0x7f, &clk_lock);
+        clk_register_clkdev(clk, NULL, "mmp-disp.0");
+        //clk_register_clkdev(clk, NULL, "mmp-disp");
+
+#else
+	//clk = clk_register_mux(NULL, "disp0_mux", disp_parent,
+	//clk = clk_register_mux(NULL, "disp0_mux", disp_parent,
+	clk = clk_register_mux(NULL, "LCDCIHCLK", disp_parent,
+                                ARRAY_SIZE(disp_parent),
+                                CLK_SET_RATE_PARENT,
+                                apmu_base + APMU_DISP0, 0, 7, 0, &clk_lock);
+        //clk_register_clkdev(clk, "disp0_mux.0", NULL);
+        clk_register_clkdev(clk, "LCDCIHCLK", NULL);
+
+        //clk = mmp_clk_register_apmu("disp0", "disp0_mux",
+        clk = mmp_clk_register_apmu("disp0", "LCDCIHCLK",
+                                apmu_base + APMU_DISP0, 0x7f, &clk_lock);
+        //clk_register_clkdev(clk, NULL, "mmp-disp.0");
+        clk_register_clkdev(clk, NULL, "mmp-disp");
+#endif
+
+	/*clk = mmp_clk_register_apmu("disp0", "disp0_mux",
+				apmu_base + APMU_DISP0, 0x1b, &clk_lock);
+	clk_register_clkdev(clk, "fnclk", "mmp-disp.0");
+
+	clk = mmp_clk_register_apmu("disp0_hclk", "disp0_mux",
+				apmu_base + APMU_DISP0, 0x24, &clk_lock);
+	clk_register_clkdev(clk, "hclk", "mmp-disp.0");*/
+#endif
+	/*clk = mmp_clk_register_apmu("mmp-disp.0", "disp0", apmu_base + APMU_DISP0,
+				0x7f, &clk_lock);
+	clk_register_clkdev(clk, "disp0", NULL);*/
+
+
+/*	clk = clk_register_mux(NULL, "disp0_mux", disp_parent,
+                                ARRAY_SIZE(disp_parent), CLK_SET_RATE_PARENT,
+                                apmu_base + APMU_DISP0, 0, 7, 0, &clk_lock);
+        clk_register_clkdev(clk, "disp_mux.0", NULL);
+
+        clk = mmp_clk_register_apmu("disp0", "disp0_mux",
+                                apmu_base + APMU_DISP0, 0x7f, &clk_lock);
+        clk_register_clkdev(clk, NULL, "mmp-disp.0");*/
+
+#endif
 
 	clk = clk_register_mux(NULL, "ccic0_mux", ccic_parent,
 				ARRAY_SIZE(ccic_parent), CLK_SET_RATE_PARENT,

@@ -179,7 +179,7 @@ static void dmafetch_onoff(struct mmp_overlay *overlay, int on)
 	mutex_unlock(&overlay->access_ok);
 }
 
-static void path_enabledisable(struct mmp_path *path, int on)
+/*static void path_enabledisable(struct mmp_path *path, int on)
 {
 	u32 tmp;
 	mutex_lock(&path->access_ok);
@@ -188,6 +188,26 @@ static void path_enabledisable(struct mmp_path *path, int on)
 		tmp &= ~SCLK_DISABLE;
 	else
 		tmp |= SCLK_DISABLE;
+	writel_relaxed(tmp, ctrl_regs(path) + LCD_SCLK(path));
+	mutex_unlock(&path->access_ok);
+}*/
+
+static void path_enabledisable(struct mmp_path *path, int on)
+{
+	u32 tmp = 0x00;
+	mutex_lock(&path->access_ok);
+	pr_warn("%s %s %d Entry reg = 0x%x\n", __FILE__, __func__, __LINE__, (ctrl_regs(path) + LCD_SCLK(path)));
+	tmp = readl_relaxed(ctrl_regs(path) + LCD_SCLK(path));
+	if (on){
+		tmp &= ~SCLK_DISABLE;
+	pr_warn("%s %s %d Entry\n", __FILE__, __func__, __LINE__);
+	}
+	else {
+		tmp |= SCLK_DISABLE;
+	pr_warn("%s %s %d Entry\n", __FILE__, __func__, __LINE__);
+	}
+	tmp = (1 << 28) | 0x01;
+	pr_warn("%s %s %d Entry writing tmp = 0x%x reg = 0x%x\n", __FILE__, __func__, __LINE__, tmp, (ctrl_regs(path) + LCD_SCLK(path)));
 	writel_relaxed(tmp, ctrl_regs(path) + LCD_SCLK(path));
 	mutex_unlock(&path->access_ok);
 }
@@ -246,6 +266,7 @@ static int overlay_set_addr(struct mmp_overlay *overlay, struct mmp_addr *addr)
 
 static void path_set_mode(struct mmp_path *path, struct mmp_mode *mode)
 {
+	static isFirst = 0x1;
 	struct lcd_regs *regs = path_regs(path);
 	u32 total_x, total_y, vsync_ctrl, tmp, sclk_src, sclk_div,
 		link_config = path_to_path_plat(path)->link_config;
@@ -255,6 +276,7 @@ static void path_set_mode(struct mmp_path *path, struct mmp_mode *mode)
 
 	mutex_lock(&path->access_ok);
 
+	if(isFirst){
 	/* polarity of timing signals */
 	tmp = readl_relaxed(ctrl_regs(path) + intf_ctrl(path->id)) & 0x1;
 	tmp |= mode->vsync_invert ? 0 : 0x8;
@@ -262,6 +284,7 @@ static void path_set_mode(struct mmp_path *path, struct mmp_mode *mode)
 	tmp |= link_config & CFG_DUMBMODE_MASK;
 	tmp |= CFG_DUMB_ENA(1);
 	writel_relaxed(tmp, ctrl_regs(path) + intf_ctrl(path->id));
+	}
 
 	writel_relaxed((mode->yres << 16) | mode->xres, &regs->screen_active);
 	writel_relaxed((mode->left_margin << 16) | mode->right_margin,
@@ -291,10 +314,17 @@ static void path_set_mode(struct mmp_path *path, struct mmp_mode *mode)
 	dev_info(path->dev, "%s sclk_src %d sclk_div 0x%x pclk %d\n",
 			__func__, sclk_src, sclk_div, mode->pixclock_freq);
 
+	if ( !isFirst ){
+		mutex_unlock(&path->access_ok);
+		return path_enabledisable(path, 1);
+        }
+
 	tmp = readl_relaxed(ctrl_regs(path) + LCD_SCLK(path));
 	tmp &= ~CLK_INT_DIV_MASK;
 	tmp |= sclk_div;
 	writel_relaxed(tmp, ctrl_regs(path) + LCD_SCLK(path));
+
+	isFirst = 0x00;
 
 	mutex_unlock(&path->access_ok);
 }

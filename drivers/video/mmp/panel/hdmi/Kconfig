@@ -1,0 +1,10 @@
+config TDA9981
+	bool	"Configure TDA 9981 HDMI Controller"
+#	tristate
+	default n
+
+config TDA9950
+	bool	"Configure TDA 9950 HDMI Controller CEC"
+#	tristate
+	depends on TDA9981
+	default n

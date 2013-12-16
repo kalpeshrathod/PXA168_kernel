@@ -283,6 +283,16 @@ static struct pxa2xx_spi_chip AT45DB041D_spi_info = {
 	.gpio_cs = 110
 };
 
+static void lcd_panel_power(int on)
+{
+}
+
+static struct mmp_mach_panel_info gplugd_lcd_panel_info = {
+        .name = "mmp-gplugdlcd",
+        .plat_path_name = "mmp-parallel",
+        .plat_set_onoff = lcd_panel_power,
+};
+
 static struct spi_board_info __initdata gplugD_spi_board_info[] = {
 	{
 		.modalias = "mtd_dataflash",
@@ -294,6 +304,14 @@ static struct spi_board_info __initdata gplugD_spi_board_info[] = {
 		.controller_data = &AT45DB041D_spi_info,
 		.irq = -1,
 	},
+#if 0
+	{
+                .modalias       = "dummylcdgplugd",
+                .platform_data  = &gplugd_lcd_panel_info,
+                /*.bus_num        = 5,*/
+        },
+#endif
+
 };
 
 static inline int pxa168_add_spi(int id, struct pxa2xx_spi_master *pdata)
@@ -329,6 +347,135 @@ static void __init read_store_mac_addr(void)
 		printk(KERN_NOTICE "%d:", (pxa168_eth_data.mac_addr[i]));*/
 }
 
+/*static void lcd_panel_power(int on)
+{
+}*/
+#ifdef CONFIG_MMP_DISP
+/* path config */
+#define CFG_IOPADMODE(iopad)   (iopad)  /* 0x0 ~ 0xd */
+
+#define SCLK_SOURCE_SELECT(x)  (x << 31) /* 0x0 ~ 0x3 */
+//#define SCLK_SOURCE_SELECT(x)  (x << 30) /* 0x0 ~ 0x3 */
+
+/* link config */
+#define CFG_DUMBMODE(mode)     (mode << 28) /* 0x0 ~ 0x6*/
+#define CFG_GRA_SWAPRB(x)      (x << 0) /* 1: rbswap enabled */
+static struct mmp_mach_path_config gplugd_disp_config[] = {
+#if 0
+        [0] = {
+                .name = "mmp-parallel",
+                .overlay_num = 2,
+                .output_type = PATH_OUT_PARALLEL,
+                .path_config = CFG_IOPADMODE(0x1)
+                        | SCLK_SOURCE_SELECT(0x1),
+                .link_config = CFG_DUMBMODE(0x2)
+                        | CFG_GRA_SWAPRB(0x1),
+        },
+#endif
+        [0] = {
+                .name = "mmp-parallel",
+                .overlay_num = 1,
+                .output_type = PATH_OUT_PARALLEL,
+                .path_config = CFG_IOPADMODE(0x1)
+                        | SCLK_SOURCE_SELECT(0x00),
+                .link_config = CFG_DUMBMODE(0x2)
+                        | CFG_GRA_SWAPRB(0x0),
+        },
+
+};
+
+static struct mmp_mach_plat_info gplugd_disp_info = {
+        .name = "mmp-disp",
+        .clk_name = "disp0",
+//        .clk_name = "disp0_mux",
+        .path_num = 1,
+        .paths = gplugd_disp_config,
+};
+
+static struct mmp_buffer_driver_mach_info gplugd_fb_info = {
+        .name = "mmp-fb",
+        .path_name = "mmp-parallel",
+        .overlay_id = 0,
+        .dmafetch_id = 1,
+//        .overlay_id = 1,
+        .default_pixfmt = PIXFMT_RGB565,
+};
+
+/*static struct mmp_mach_panel_info gplugd_lcd_panel_info = {
+        .name = "dummylcdgplugd",
+        .plat_path_name = "mmp-parallel",
+        .plat_set_onoff = lcd_panel_power,
+};*/
+
+#if 0
+static struct spi_board_info spi_board_info[] __initdata = {
+        {
+                .modalias       = "dummylcdgplugd",
+                .platform_data  = &gplugd_lcd_panel_info,
+                /*.bus_num        = 5,*/
+        }
+};
+#endif
+
+#if 0
+static void lcd_panel_power(int on)
+{
+        int err;
+        u32 gpio_35 = mfp_to_gpio(MFP_PIN_GPIO35);
+        u32 gpio_85 = mfp_to_gpio(MFP_PIN_GPIO85);
+
+	/* set GPIO 35 & clear GPIO 85 to set LCD External Clock to 74.25 MHz */
+        if (unlikely(gpio_request(gpio_35, "DISP_FREQ_SEL"))) {
+                printk(KERN_ERR "Can't get hold of GPIO 35 to select display "
+                                "frequency\n");
+        } else {
+                gpio_direction_output(gpio_35, 1);
+                gpio_free(gpio_35);
+        }
+
+        if (unlikely(gpio_request(gpio_85, "DISP_FREQ_SEL_2"))) {
+                printk(KERN_ERR "Can't get hold of GPIO 85 to select display "
+                                "frequency\n");
+        } else {
+                gpio_direction_output(gpio_85, 0);
+                gpio_free(gpio_85);
+        }
+}
+
+static struct mmp_mach_panel_info dkb_tpo_panel_info = {
+        .name = "tpo-hvga",
+        .plat_path_name = "mmp-parallel",
+        .plat_set_onoff = dkb_tpo_panel_power,
+};
+
+static struct spi_board_info spi_board_info[] __initdata = {
+        {
+                .modalias       = "tpo-hvga",
+                .platform_data  = &dkb_tpo_panel_info,
+                .bus_num        = 5,
+        }
+};
+
+#endif
+
+static void __init add_disp(void)
+{
+#if 1
+        pxa_register_device(&pxa168_device_disp,
+                &gplugd_disp_info, sizeof(gplugd_disp_info));
+        /*spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));*/
+        /*pxa_register_device(&pxa168_device_panel,
+                &gplugd_lcd_panel_info, sizeof(gplugd_lcd_panel_info));*/
+        pxa_register_device(&pxa168_device_fb,
+                &gplugd_fb_info, sizeof(gplugd_fb_info));
+        /*pxa_register_device(&pxa910_device_panel,
+                &dkb_tpo_panel_info, sizeof(dkb_tpo_panel_info));*/
+        pxa_register_device(&pxa168_device_panel,
+                &gplugd_lcd_panel_info, sizeof(gplugd_lcd_panel_info));
+#endif
+}
+#endif
+
 static struct fb_videomode video_modes[] = {
 	/* TDA9989 Video Mode */
 	[0] = {
@@ -356,7 +503,7 @@ static struct pxa168fb_mach_info tda9981_hdmi_info __initdata = {
 	.active			= 1,
 	.panel_rbswap		= 1,
 	.invert_pixclock	= 0,
-	.max_fb_size	    = (1280 * 720 * 4),
+/*	.max_fb_size	    = (1280 * 720 * 4),*/
 };
 
 static void __init gplugd_init(void)
@@ -374,6 +521,7 @@ static void __init gplugd_init(void)
 	/*pxa168_add_twsi(0, NULL, ARRAY_AND_SIZE(gplugd_i2c_board_info));*/
 	pxa168_add_twsi(0, &i2c_info, ARRAY_AND_SIZE(gplugd_i2c_board_info));
 
+#if 1
 	read_store_mac_addr();
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
@@ -403,8 +551,13 @@ static void __init gplugd_init(void)
 	pxa168_add_ssp(2);
 	pxa168_add_spi(2, &pxa_ssp_master_info);
 	spi_register_board_info(gplugD_spi_board_info, ARRAY_SIZE(gplugD_spi_board_info));
-	pxa168_add_fb(&tda9981_hdmi_info);
-	pxa168_add_fb_ovly(&tda9981_hdmi_info);
+
+#ifdef CONFIG_MMP_DISP
+        add_disp();
+#endif
+	/*pxa168_add_fb(&tda9981_hdmi_info);*/
+	/*pxa168_add_fb_ovly(&tda9981_hdmi_info);*/
+#endif
 }
 
 MACHINE_START(GPLUGD, "PXA168-based GuruPlug Display (gplugD) Platform")

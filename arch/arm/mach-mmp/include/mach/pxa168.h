@@ -16,6 +16,7 @@ extern void pxa168_clear_keypad_wakeup(void);
 #include <linux/pxa168_eth.h>
 #include <linux/platform_data/pxa_sdhci.h>
 #include <linux/platform_data/mv_usb.h>
+#include <video/mmp_disp.h>
 
 extern struct pxa_device_desc pxa168_device_uart1;
 extern struct pxa_device_desc pxa168_device_uart2;
@@ -33,6 +34,8 @@ extern struct pxa_device_desc pxa168_device_ssp4;
 extern struct pxa_device_desc pxa168_device_ssp5;
 extern struct pxa_device_desc pxa168_device_nand;
 extern struct pxa_device_desc pxa168_device_fb;
+extern struct pxa_device_desc pxa168_device_disp;
+extern struct pxa_device_desc pxa168_device_panel;
 extern struct pxa_device_desc pxa168_device_keypad;
 extern struct pxa_device_desc pxa168_device_eth;
 extern struct pxa_device_desc pxa168_device_sdh1;

@@ -1,6 +1,6 @@
 menuconfig MMP_DISP
         tristate "Marvell MMP Display Subsystem support"
-        depends on CPU_PXA910 || CPU_MMP2 || CPU_MMP3 || CPU_PXA988
+        depends on CPU_PXA910 || CPU_MMP2 || CPU_MMP3 || CPU_PXA988 || CPU_PXA168
         help
 	  Marvell Display Subsystem support.
 
@@ -8,4 +8,5 @@ if MMP_DISP
 source "drivers/video/mmp/hw/Kconfig"
 source "drivers/video/mmp/panel/Kconfig"
 source "drivers/video/mmp/fb/Kconfig"
+source "drivers/video/mmp/panel/hdmi/Kconfig"
 endif
