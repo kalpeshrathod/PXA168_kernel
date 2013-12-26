@@ -358,8 +358,9 @@ static void __init read_store_mac_addr(void)
 //#define SCLK_SOURCE_SELECT(x)  (x << 30) /* 0x0 ~ 0x3 */
 
 /* link config */
-#define CFG_DUMBMODE(mode)     (mode << 28) /* 0x0 ~ 0x6*/
-#define CFG_GRA_SWAPRB(x)      (x << 0) /* 1: rbswap enabled */
+#define CFG_DUMBMODE(mode)	(mode << 28) /* 0x0 ~ 0x6*/
+//#define CFG_GRA_SWAPRB(x)	(x << 0) /* 1: rbswap enabled */
+#define CFG_GRA_SWAPRB(swap)	((swap) << 12)
 static struct mmp_mach_path_config gplugd_disp_config[] = {
 #if 0
         [0] = {
@@ -376,7 +377,7 @@ static struct mmp_mach_path_config gplugd_disp_config[] = {
                 .name = "mmp-parallel",
                 .overlay_num = 1,
                 .output_type = PATH_OUT_PARALLEL,
-                .path_config = CFG_IOPADMODE(0x1)
+                .path_config = CFG_IOPADMODE(0x00)
                         | SCLK_SOURCE_SELECT(0x00),
                 .link_config = CFG_DUMBMODE(0x2)
                         | CFG_GRA_SWAPRB(0x0),

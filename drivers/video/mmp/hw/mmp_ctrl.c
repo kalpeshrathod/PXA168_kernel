@@ -277,13 +277,14 @@ static void path_set_mode(struct mmp_path *path, struct mmp_mode *mode)
 	mutex_lock(&path->access_ok);
 
 	if(isFirst){
-	/* polarity of timing signals */
-	tmp = readl_relaxed(ctrl_regs(path) + intf_ctrl(path->id)) & 0x1;
-	tmp |= mode->vsync_invert ? 0 : 0x8;
-	tmp |= mode->hsync_invert ? 0 : 0x4;
-	tmp |= link_config & CFG_DUMBMODE_MASK;
-	tmp |= CFG_DUMB_ENA(1);
-	writel_relaxed(tmp, ctrl_regs(path) + intf_ctrl(path->id));
+		/* polarity of timing signals */
+		tmp = readl_relaxed(ctrl_regs(path) + intf_ctrl(path->id)) & 0x1;
+		tmp |= mode->vsync_invert ? 0 : 0x8;
+		tmp |= mode->hsync_invert ? 0 : 0x4;
+		tmp |= link_config & CFG_DUMBMODE_MASK;
+		tmp |= CFG_DUMB_ENA(1);
+		tmp = 0x60000001;
+		writel_relaxed(tmp, ctrl_regs(path) + intf_ctrl(path->id));
 	}
 
 	writel_relaxed((mode->yres << 16) | mode->xres, &regs->screen_active);
