@@ -17,6 +17,7 @@
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <asm/system.h>
 
 #include <mach/irqs.h>
 #include <mach/pxa168.h>
@@ -226,6 +227,18 @@ static inline int pxa168_add_spi(int id, struct pxa2xx_spi_master *pdata)
 
 	return platform_device_add(pd);
 }
+/* gplugD uses serial number tag to pass MAC address */
+static void __init read_store_mac_addr(void)
+{
+	int i;
+	u8 *mac_addr = gplugd_eth_platform_data.mac_addr;
+
+	*mac_addr++ = (system_serial_high >> 8) & 0xff;
+	*mac_addr++ = system_serial_high & 0xff;
+
+	for (i = 3; i >= 0; i--)
+		*mac_addr++ = (system_serial_low >> i*8) & 0xff;
+}
 
 static void __init gplugd_init(void)
 {
@@ -243,6 +256,7 @@ static void __init gplugd_init(void)
 
 	pxa168_add_twsi(0, &i2c_info, ARRAY_AND_SIZE(gplugd_i2c_board_info));
 
+	read_store_mac_addr();
 	pxa168_add_eth(&gplugd_eth_platform_data);
 
 	pxa168_add_ssp(2);
