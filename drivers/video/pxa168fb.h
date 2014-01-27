@@ -461,6 +461,13 @@
 #define     PWRDN_IRQ_MASK			0x00020000
 #define     ERR_IRQ(irq)			((irq) << 16)
 #define     ERR_IRQ_MASK			0x00010000
+
+#define LCD_FIFO_DEPTH                          0x01c8
+#define     VIDEO_FIFO(fi)                      (fi << 0)
+#define     VIDEO_FIFO_MASK                     0x00000003
+#define     GRAPHIC_FIFO(fi)                    (fi << 2)
+#define     GRAPHIC_FIFO_MASK                   0x0000000c
+
 /* read-only */
 #define     DMA_FRAME_IRQ0_LEVEL_MASK		0x00008000
 #define     DMA_FRAME_IRQ1_LEVEL_MASK		0x00004000

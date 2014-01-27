@@ -43,6 +43,7 @@ extern struct platform_device pxa168_device_u2o;
 extern struct platform_device pxa168_device_u2h;
 extern struct platform_device pxa168_device_u2oehci;
 extern struct platform_device pxa168_device_u2ootg;
+extern struct pxa_device_desc pxa168_device_fb_ovly;
 /* pdata can be NULL */
 extern int __init pxa168_add_usb_host(struct mv_usb_platform_data *pdata);
 
@@ -125,6 +126,11 @@ static inline int pxa168_add_nand(struct pxa3xx_nand_platform_data *info)
 static inline int pxa168_add_fb(struct pxa168fb_mach_info *mi)
 {
 	return pxa_register_device(&pxa168_device_fb, mi, sizeof(*mi));
+}
+
+static inline int pxa168_add_fb_ovly(struct pxa168fb_mach_info *mi)
+{
+	return pxa_register_device(&pxa168_device_fb_ovly, mi, sizeof(*mi));
 }
 
 static inline int pxa168_add_keypad(struct pxa27x_keypad_platform_data *data)

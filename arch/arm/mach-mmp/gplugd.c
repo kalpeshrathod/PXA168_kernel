@@ -143,6 +143,14 @@ static struct i2c_pxa_platform_data i2c_info __initdata = {
 
 static struct i2c_board_info gplugd_i2c_board_info[] = {
 	{
+		.type = "tda998X",
+		.addr = 0x70,
+	},
+	{
+		.type = "tda99Xcec",
+		.addr = 0x34,
+	},
+	{
 		.type = "isl1208",
 		.addr = 0x6F,
 	}
@@ -295,6 +303,36 @@ static void __init read_store_mac_addr(void)
 		*mac_addr++ = (system_serial_low >> i*8) & 0xff;
 }
 
+static struct fb_videomode video_modes[] = {
+	/* TDA9989 Video Mode */
+	[0] = {
+		.pixclock	= 13468,
+		.refresh	= 60,
+		.xres		= 1280,
+		.yres		= 720,
+		.hsync_len	= 40,
+		.left_margin	= 220,
+		.right_margin	= 110,
+		.vsync_len	= 5,
+		.upper_margin	= 20,
+		.lower_margin	= 5,
+		.sync		= 0,
+	},
+};
+
+static struct pxa168fb_mach_info tda9981_hdmi_info __initdata = {
+	.id			= "tda9981",
+	.modes			= video_modes,
+	.num_modes		= ARRAY_SIZE(video_modes),
+	.pix_fmt		= PIX_FMT_RGB565,
+	.io_pin_allocation_mode	= PIN_MODE_DUMB_24,
+	.dumb_mode		= DUMB_MODE_RGB888,
+	.active			= 1,
+	.panel_rbswap		= 1,
+	.invert_pixclock	= 0,
+	.max_fb_size	    = (1280 * 720 * 4),
+};
+
 static void __init gplugd_init(void)
 {
 	mfp_config(ARRAY_AND_SIZE(gplugd_pin_config));
@@ -335,6 +373,9 @@ static void __init gplugd_init(void)
 
 	pxa168_add_spi(2, &pxa_ssp_master_info);
 	spi_register_board_info(gplugD_spi_board_info, ARRAY_SIZE(gplugD_spi_board_info));
+
+	pxa168_add_fb(&tda9981_hdmi_info);
+	pxa168_add_fb_ovly(&tda9981_hdmi_info);
 }
 
 MACHINE_START(GPLUGD, "PXA168-based GuruPlug Display (gplugD) Platform")

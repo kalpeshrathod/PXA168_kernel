@@ -1,0 +1,7 @@
+config TDA9981
+	tristate
+	default n
+
+config TDA9950
+	tristate
+	default n
