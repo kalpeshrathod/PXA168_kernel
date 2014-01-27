@@ -133,6 +133,10 @@ static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
 	.irq_base	= MMP_GPIO_TO_IRQ(0),
 };
 
+static struct i2c_pxa_platform_data i2c_info __initdata = {
+	.use_pio	= 1,
+};
+
 static struct i2c_board_info gplugd_i2c_board_info[] = {
 	{
 		.type = "isl1208",
@@ -184,16 +188,17 @@ static void __init select_disp_freq(void)
 static void __init gplugd_init(void)
 {
 	mfp_config(ARRAY_AND_SIZE(gplugd_pin_config));
+	platform_device_add_data(&pxa168_device_gpio, &pxa168_gpio_pdata,
+				 sizeof(struct pxa_gpio_platform_data));
+	platform_device_register(&pxa168_device_gpio);
 
 	select_disp_freq();
 
 	/* on-chip devices */
 	pxa168_add_uart(3);
 	pxa168_add_ssp(1);
-	pxa168_add_twsi(0, NULL, ARRAY_AND_SIZE(gplugd_i2c_board_info));
-	platform_device_add_data(&pxa168_device_gpio, &pxa168_gpio_pdata,
-				 sizeof(struct pxa_gpio_platform_data));
-	platform_device_register(&pxa168_device_gpio);
+
+	pxa168_add_twsi(0, &i2c_info, ARRAY_AND_SIZE(gplugd_i2c_board_info));
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
 }
