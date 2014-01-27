@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/gpio-pxa.h>
+#include <linux/mmc/sdhci.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/pxa2xx_spi.h>
 
@@ -168,6 +169,10 @@ struct pxa168_eth_platform_data gplugd_eth_platform_data = {
 	.init        = gplugd_eth_init,
 };
 
+struct sdhci_pxa_platdata gplugd_sdh_platdata = {
+	.quirks = SDHCI_QUIRK_NO_HISPD_BIT | SDHCI_QUIRK_NO_BUSY_IRQ | SDHCI_QUIRK_32BIT_DMA_SIZE,
+};
+
 static void __init select_disp_freq(void)
 {
 	/* set GPIO 35 & clear GPIO 85 to set LCD External Clock to 74.25 MHz */
@@ -259,6 +264,8 @@ static void __init gplugd_init(void)
 	read_store_mac_addr();
 	pxa168_add_eth(&gplugd_eth_platform_data);
 
+	pxa168_add_sdh(1, &gplugd_sdh_platdata);
+	pxa168_add_sdh(2, &gplugd_sdh_platdata);
 	pxa168_add_ssp(2);
 
 	pxa168_add_spi(2, &pxa_ssp_master_info);

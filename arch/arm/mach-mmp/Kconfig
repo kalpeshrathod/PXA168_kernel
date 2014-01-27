@@ -80,6 +80,7 @@ config MACH_TETON_BGA
 config MACH_GPLUGD
 	bool "Marvell's PXA168 GuruPlug Display (gplugD) Board"
 	select CPU_PXA168
+	select MMC
 	help
 	  Say 'Y' here if you want to support the Marvell PXA168-based
 	  GuruPlug Display (gplugD) Board
