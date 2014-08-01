@@ -887,6 +887,11 @@ static void handle_link_event(struct pxa168_eth_private *pep)
 	int speed;
 	int duplex;
 	int fc;
+	struct phy_device *phy = pep->phy;
+
+	printk(KERN_INFO "%s: test link up, %d Mb/s, %s duplex, "
+	       "duplex value is %dabled\n", dev->name,
+	       phy->speed, phy->duplex ? "full" : "half", phy->duplex);
 
 	port_status = rdl(pep, PORT_STATUS);
 	if (!(port_status & LINK_UP)) {
@@ -904,9 +909,9 @@ static void handle_link_event(struct pxa168_eth_private *pep)
 
 	duplex = (port_status & FULL_DUPLEX) ? 1 : 0;
 	fc = (port_status & FLOW_CONTROL_ENABLED) ? 1 : 0;
-	printk(KERN_INFO "%s: link up, %d Mb/s, %s duplex, "
+	/*printk(KERN_INFO "%s: link up, %d Mb/s, %s duplex, "
 	       "flow control %sabled\n", dev->name,
-	       speed, duplex ? "full" : "half", fc ? "en" : "dis");
+	       speed, duplex ? "full" : "half", fc ? "en" : "dis");*/
 	if (!netif_carrier_ok(dev))
 		netif_carrier_on(dev);
 }
@@ -1519,7 +1524,15 @@ static int pxa168_eth_probe(struct platform_device *pdev)
 	if (pep->pd->init)
 		pep->pd->init();
 
-	if (is_valid_ether_addr(pep->pd->mac_addr)){
+	{
+		int i;
+		for (i=0;i<6;i++)
+			pr_warn("%s %d: mac_addr[%d] = %x\n",
+					__func__, __LINE__, i,
+					pep->pd->mac_addr[i]);
+	}
+
+	if (is_valid_ether_addr(pep->pd->mac_addr)) {
 		memcpy(dev->dev_addr, pep->pd->mac_addr, 6);
 	} else {
 		printk(KERN_INFO "%s:Using random mac address\n", DRIVER_NAME);

@@ -23,7 +23,7 @@
 #include <mach/irqs.h>
 #include <mach/pxa168.h>
 #include <mach/mfp-pxa168.h>
-
+#include <uapi/linux/ethtool.h>
 #include "common.h"
 
 static unsigned long gplugd_pin_config[] __initdata = {
@@ -159,21 +159,38 @@ static struct i2c_board_info gplugd_i2c_board_info[] = {
 /* Bring PHY out of reset by setting GPIO 104 */
 static int gplugd_eth_init(void)
 {
-	if (unlikely(gpio_request(104, "ETH_RESET_N"))) {
-		printk(KERN_ERR "Can't get hold of GPIO 104 to bring Ethernet "
-				"PHY out of reset\n");
+	int gpio_enet_reset = 104;
+	int gpio_enet_coma = 102;
+
+	if (unlikely(gpio_request(gpio_enet_reset, "ETH_RESET_N"))) {
+		printk(KERN_ERR "Can't get hold of GPIO %d to bring Ethernet "
+				"PHY out of reset\n", gpio_enet_reset);
+		return -EIO;
+	}
+	if (unlikely(gpio_request(gpio_enet_coma, "ETH_COMA_N"))) {
+		printk(KERN_ERR "Can't get hold of GPIO %d to bring Ethernet "
+				"PHY out of coma\n", gpio_enet_coma);
 		return -EIO;
 	}
 
-	gpio_direction_output(104, 1);
-	gpio_free(104);
+
+	gpio_direction_output(gpio_enet_reset, 1);
+	gpio_direction_output(gpio_enet_coma, 1);
+
+	gpio_free(gpio_enet_reset);
+	gpio_free(gpio_enet_coma);
 	return 0;
 }
 
 struct pxa168_eth_platform_data gplugd_eth_platform_data = {
 	.port_number = 0,
 	.phy_addr    = 0,
+#if 1
 	.speed       = 0, /* Autonagotiation */
+#else
+	.speed       = SPEED_10,
+	.duplex	     = DUPLEX_HALF,
+#endif
 	.init        = gplugd_eth_init,
 };
 
@@ -290,18 +307,71 @@ static inline int pxa168_add_spi(int id, struct pxa2xx_spi_master *pdata)
 
 	return platform_device_add(pd);
 }
-/* gplugD uses serial number tag to pass MAC address */
-static void __init read_store_mac_addr(void)
+
+#ifdef CONFIG_MTD
+static void gplugd_parse_enetaddr(const u8 *addr, u8 *enetaddr)
 {
+	char *end;
 	int i;
-	u8 *mac_addr = gplugd_eth_platform_data.mac_addr;
 
-	*mac_addr++ = (system_serial_high >> 8) & 0xff;
-	*mac_addr++ = system_serial_high & 0xff;
+	pr_warn("%s %d: Entry\n", __func__, __LINE__);
 
-	for (i = 3; i >= 0; i--)
-		*mac_addr++ = (system_serial_low >> i*8) & 0xff;
+	for (i = 0; i < 6; ++i) {
+		enetaddr[i] = addr ? simple_strtoul(addr, &end, 16) : 0;
+		pr_warn("%s %d: enetaddr[%d]=%x\n", __func__, __LINE__,
+				i, enetaddr[i]);
+		if (addr)
+			addr = (*end) ? end + 1 : end;
+	}
 }
+
+static void gplugd_mtd_notify_add(struct mtd_info *mtd)
+{
+#define GPLUGD_SERIAL_NUM_LENGTH        14
+#define GPLUGD_MAC_ADDR_LENGTH          18
+	char otp_serial_num[GPLUGD_SERIAL_NUM_LENGTH];
+	char otp_mac_addr[GPLUGD_MAC_ADDR_LENGTH];
+	u8 *mac_addr = gplugd_eth_platform_data.mac_addr;
+	size_t retlen;
+	int i;
+
+	if (mtd->_read_user_prot_reg) {
+		if (!mtd->_read_user_prot_reg(mtd, 0, GPLUGD_SERIAL_NUM_LENGTH,
+					&retlen, otp_serial_num)) {
+			if (!mtd->_read_user_prot_reg(mtd,
+						GPLUGD_SERIAL_NUM_LENGTH,
+						GPLUGD_MAC_ADDR_LENGTH,
+						&retlen, otp_mac_addr)) {
+
+				gplugd_parse_enetaddr(otp_mac_addr, mac_addr);
+				for (i=0;i<6;i++)
+					pr_warn("%s %d: addr[%d]=%x\n",
+							__func__, __LINE__,
+							i,
+					gplugd_eth_platform_data.mac_addr[i]);
+			} else {
+				pr_err("%s %d: OTP MAC Address read failed\n",
+						__func__, __LINE__);
+			}
+		} else {
+			pr_err("%s %d: OTP Serial Number read failed\n",
+						__func__, __LINE__);
+		}
+	}
+}
+
+static struct mtd_notifier gplugd_spi_notifier = {
+	.add = gplugd_mtd_notify_add,
+};
+
+static void gplugd_setup_mac_addr(void)
+{
+	pr_warn("%s %d: Entry\n", __func__, __LINE__);
+	register_mtd_user(&gplugd_spi_notifier);
+}
+#else
+static void gplugd_setup_mac_addr(void) { }
+#endif
 
 static struct fb_videomode video_modes[] = {
 	/* TDA9989 Video Mode */
@@ -349,11 +419,18 @@ static void __init gplugd_init(void)
 
 	pxa168_add_twsi(0, &i2c_info, ARRAY_AND_SIZE(gplugd_i2c_board_info));
 
-	read_store_mac_addr();
-	pxa168_add_eth(&gplugd_eth_platform_data);
+	gplugd_setup_mac_addr();
+
+	pxa168_add_spi(2, &pxa_ssp_master_info);
+	spi_register_board_info(gplugD_spi_board_info,
+			ARRAY_SIZE(gplugD_spi_board_info));
+
+	pxa168_add_ssp(2);
+
 
 	pxa168_add_sdh(1, &gplugd_sdh_platdata);
 	pxa168_add_sdh(2, &gplugd_sdh_platdata);
+
 
 #if defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_EHCI_MV)
 	pxa168_device_u2h.dev.platform_data = &pxa168_u2h_pdata;
@@ -368,14 +445,18 @@ static void __init gplugd_init(void)
 	pxa168_device_u2oehci.dev.platform_data = &pxa168_u2o_pdata;
 	platform_device_register(&pxa168_device_u2oehci);
 #endif
-
-	pxa168_add_ssp(2);
-
-	pxa168_add_spi(2, &pxa_ssp_master_info);
-	spi_register_board_info(gplugD_spi_board_info, ARRAY_SIZE(gplugD_spi_board_info));
-
 	pxa168_add_fb(&tda9981_hdmi_info);
 	pxa168_add_fb_ovly(&tda9981_hdmi_info);
+
+	{
+		int i;
+		for (i=0;i<6;i++)
+			pr_warn("%s %d: addr[%d]=%x\n", __func__, __LINE__,
+					i,
+					gplugd_eth_platform_data.mac_addr[i]);
+	}
+
+	pxa168_add_eth(&gplugd_eth_platform_data);
 }
 
 MACHINE_START(GPLUGD, "PXA168-based GuruPlug Display (gplugD) Platform")
