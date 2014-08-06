@@ -889,7 +889,7 @@ static void handle_link_event(struct pxa168_eth_private *pep)
 	int fc;
 	struct phy_device *phy = pep->phy;
 
-	printk(KERN_INFO "%s: test link up, %d Mb/s, %s duplex, "
+	printk(KERN_INFO "%s: link up, %d Mb/s, %s duplex, "
 	       "duplex value is %dabled\n", dev->name,
 	       phy->speed, phy->duplex ? "full" : "half", phy->duplex);
 
@@ -1524,13 +1524,8 @@ static int pxa168_eth_probe(struct platform_device *pdev)
 	if (pep->pd->init)
 		pep->pd->init();
 
-	{
-		int i;
-		for (i=0;i<6;i++)
-			pr_warn("%s %d: mac_addr[%d] = %x\n",
-					__func__, __LINE__, i,
-					pep->pd->mac_addr[i]);
-	}
+	if (pep->pd->device_mac)
+		pep->pd->device_mac(pep->pd->mac_addr);
 
 	if (is_valid_ether_addr(pep->pd->mac_addr)) {
 		memcpy(dev->dev_addr, pep->pd->mac_addr, 6);

@@ -27,6 +27,7 @@ struct pxa168_eth_platform_data {
 	 * e.g on Aspenite its used to initialize the PHY transceiver.
 	 */
 	int (*init)(void);
+	int (*device_mac)(u8 *mac_addr);
 };
 
 #endif /* __LINUX_PXA168_ETH_H */

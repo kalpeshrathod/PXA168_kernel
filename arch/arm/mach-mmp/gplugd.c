@@ -24,6 +24,7 @@
 #include <mach/pxa168.h>
 #include <mach/mfp-pxa168.h>
 #include <uapi/linux/ethtool.h>
+#include <linux/etherdevice.h>
 #include "common.h"
 
 static unsigned long gplugd_pin_config[] __initdata = {
@@ -133,6 +134,7 @@ static unsigned long gplugd_pin_config[] __initdata = {
 	GPIO116_I2S_TXD
 };
 
+
 static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
 	.irq_base	= MMP_GPIO_TO_IRQ(0),
 };
@@ -154,44 +156,6 @@ static struct i2c_board_info gplugd_i2c_board_info[] = {
 		.type = "isl1208",
 		.addr = 0x6F,
 	}
-};
-
-/* Bring PHY out of reset by setting GPIO 104 */
-static int gplugd_eth_init(void)
-{
-	int gpio_enet_reset = 104;
-	int gpio_enet_coma = 102;
-
-	if (unlikely(gpio_request(gpio_enet_reset, "ETH_RESET_N"))) {
-		printk(KERN_ERR "Can't get hold of GPIO %d to bring Ethernet "
-				"PHY out of reset\n", gpio_enet_reset);
-		return -EIO;
-	}
-	if (unlikely(gpio_request(gpio_enet_coma, "ETH_COMA_N"))) {
-		printk(KERN_ERR "Can't get hold of GPIO %d to bring Ethernet "
-				"PHY out of coma\n", gpio_enet_coma);
-		return -EIO;
-	}
-
-
-	gpio_direction_output(gpio_enet_reset, 1);
-	gpio_direction_output(gpio_enet_coma, 1);
-
-	gpio_free(gpio_enet_reset);
-	gpio_free(gpio_enet_coma);
-	return 0;
-}
-
-struct pxa168_eth_platform_data gplugd_eth_platform_data = {
-	.port_number = 0,
-	.phy_addr    = 0,
-#if 1
-	.speed       = 0, /* Autonagotiation */
-#else
-	.speed       = SPEED_10,
-	.duplex	     = DUPLEX_HALF,
-#endif
-	.init        = gplugd_eth_init,
 };
 
 struct sdhci_pxa_platdata gplugd_sdh_platdata = {
@@ -314,18 +278,16 @@ static void gplugd_parse_enetaddr(const u8 *addr, u8 *enetaddr)
 	char *end;
 	int i;
 
-	pr_warn("%s %d: Entry\n", __func__, __LINE__);
-
 	for (i = 0; i < 6; ++i) {
 		enetaddr[i] = addr ? simple_strtoul(addr, &end, 16) : 0;
-		pr_warn("%s %d: enetaddr[%d]=%x\n", __func__, __LINE__,
-				i, enetaddr[i]);
 		if (addr)
 			addr = (*end) ? end + 1 : end;
 	}
 }
 
-static void gplugd_mtd_notify_add(struct mtd_info *mtd)
+static struct pxa168_eth_platform_data gplugd_eth_platform_data;
+
+static void __init read_device_serial_mac(void)
 {
 #define GPLUGD_SERIAL_NUM_LENGTH        14
 #define GPLUGD_MAC_ADDR_LENGTH          18
@@ -333,7 +295,14 @@ static void gplugd_mtd_notify_add(struct mtd_info *mtd)
 	char otp_mac_addr[GPLUGD_MAC_ADDR_LENGTH];
 	u8 *mac_addr = gplugd_eth_platform_data.mac_addr;
 	size_t retlen;
-	int i;
+	struct mtd_info *mtd = NULL;
+
+	mtd = get_mtd_device(NULL, 0x00);
+
+	if (!mtd) {
+		pr_err("%s %d: No MTD devices found", __func__, __LINE__);
+		return;
+	}
 
 	if (mtd->_read_user_prot_reg) {
 		if (!mtd->_read_user_prot_reg(mtd, 0, GPLUGD_SERIAL_NUM_LENGTH,
@@ -344,11 +313,6 @@ static void gplugd_mtd_notify_add(struct mtd_info *mtd)
 						&retlen, otp_mac_addr)) {
 
 				gplugd_parse_enetaddr(otp_mac_addr, mac_addr);
-				for (i=0;i<6;i++)
-					pr_warn("%s %d: addr[%d]=%x\n",
-							__func__, __LINE__,
-							i,
-					gplugd_eth_platform_data.mac_addr[i]);
 			} else {
 				pr_err("%s %d: OTP MAC Address read failed\n",
 						__func__, __LINE__);
@@ -358,20 +322,58 @@ static void gplugd_mtd_notify_add(struct mtd_info *mtd)
 						__func__, __LINE__);
 		}
 	}
-}
 
-static struct mtd_notifier gplugd_spi_notifier = {
-	.add = gplugd_mtd_notify_add,
-};
-
-static void gplugd_setup_mac_addr(void)
-{
-	pr_warn("%s %d: Entry\n", __func__, __LINE__);
-	register_mtd_user(&gplugd_spi_notifier);
+	put_mtd_device(mtd);
 }
 #else
-static void gplugd_setup_mac_addr(void) { }
+static void __init read_device_serial_mac(void) {}
 #endif
+
+static int device_mac_address(u8 *mac_addr)
+{
+	pr_warn("%s %d: Entry\n", __func__, __LINE__);
+	read_device_serial_mac();
+	if (!is_valid_ether_addr(gplugd_eth_platform_data.mac_addr))
+		return -EINVAL;
+	memcpy(mac_addr, gplugd_eth_platform_data.mac_addr, 6);
+	return 0;
+}
+
+/* Bring PHY out of reset by setting GPIO 104 */
+static int gplugd_eth_init(void)
+{
+	int gpio_enet_reset = 104;
+	int gpio_enet_coma = 102;
+
+	if (unlikely(gpio_request(gpio_enet_reset, "ETH_RESET_N"))) {
+		printk(KERN_ERR "Can't get hold of GPIO %d to bring Ethernet "
+				"PHY out of reset\n", gpio_enet_reset);
+		return -EIO;
+	}
+	if (unlikely(gpio_request(gpio_enet_coma, "ETH_COMA_N"))) {
+		printk(KERN_ERR "Can't get hold of GPIO %d to bring Ethernet "
+				"PHY out of coma\n", gpio_enet_coma);
+		return -EIO;
+	}
+
+
+	gpio_direction_output(gpio_enet_reset, 1);
+	gpio_direction_output(gpio_enet_coma, 1);
+
+	gpio_free(gpio_enet_reset);
+	gpio_free(gpio_enet_coma);
+	return 0;
+}
+
+static struct pxa168_eth_platform_data gplugd_eth_platform_data = {
+	.port_number = 0,
+	.phy_addr    = 0,
+	.speed       = 0, /* Autonagotiation */
+	.mac_addr    = {0x00},
+	.init        = gplugd_eth_init,
+	.device_mac  = device_mac_address,
+};
+
 
 static struct fb_videomode video_modes[] = {
 	/* TDA9989 Video Mode */
@@ -419,18 +421,14 @@ static void __init gplugd_init(void)
 
 	pxa168_add_twsi(0, &i2c_info, ARRAY_AND_SIZE(gplugd_i2c_board_info));
 
-	gplugd_setup_mac_addr();
-
 	pxa168_add_spi(2, &pxa_ssp_master_info);
 	spi_register_board_info(gplugD_spi_board_info,
 			ARRAY_SIZE(gplugD_spi_board_info));
 
 	pxa168_add_ssp(2);
 
-
 	pxa168_add_sdh(1, &gplugd_sdh_platdata);
 	pxa168_add_sdh(2, &gplugd_sdh_platdata);
-
 
 #if defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_EHCI_MV)
 	pxa168_device_u2h.dev.platform_data = &pxa168_u2h_pdata;
@@ -447,14 +445,6 @@ static void __init gplugd_init(void)
 #endif
 	pxa168_add_fb(&tda9981_hdmi_info);
 	pxa168_add_fb_ovly(&tda9981_hdmi_info);
-
-	{
-		int i;
-		for (i=0;i<6;i++)
-			pr_warn("%s %d: addr[%d]=%x\n", __func__, __LINE__,
-					i,
-					gplugd_eth_platform_data.mac_addr[i]);
-	}
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
 }
