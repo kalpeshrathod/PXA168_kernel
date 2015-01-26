@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/gpio-pxa.h>
+#include <linux/mmc/sdhci.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/pxa2xx_spi.h>
 
@@ -146,6 +147,10 @@ static struct i2c_board_info gplugd_i2c_board_info[] = {
 		.type = "isl1208",
 		.addr = 0x6F,
 	}
+};
+
+struct sdhci_pxa_platdata gplugd_sdh_platdata = {
+	.quirks = SDHCI_QUIRK_NO_HISPD_BIT | SDHCI_QUIRK_NO_BUSY_IRQ | SDHCI_QUIRK_32BIT_DMA_SIZE,
 };
 
 static void __init select_disp_freq(void)
@@ -331,6 +336,9 @@ static void __init gplugd_init(void)
 			ARRAY_SIZE(gplugD_spi_board_info));
 
 	pxa168_add_ssp(2);
+
+	pxa168_add_sdh(1, &gplugd_sdh_platdata);
+	pxa168_add_sdh(2, &gplugd_sdh_platdata);
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
 }

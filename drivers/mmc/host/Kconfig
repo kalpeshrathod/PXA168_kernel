@@ -231,7 +231,8 @@ config MMC_SDHCI_PXAV2
 	depends on CLKDEV_LOOKUP
 	select MMC_SDHCI
 	select MMC_SDHCI_PLTFM
-	default CPU_PXA910
+	select MMC_SDHCI_IO_ACCESSORS if MACH_GPLUGD
+	default y if (CPU_PXA910 || MACH_GPLUGD)
 	help
 	  This selects the Marvell(R) PXAV2 SD Host Controller.
 	  If you have a PXA9XX platform with SD Host Controller
