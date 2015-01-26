@@ -20,11 +20,14 @@ struct pxa168_eth_platform_data {
 	int	rx_queue_size;
 	int	tx_queue_size;
 
+	u8	mac_addr[6];	/* mac address if non-zero*/
+
 	/*
 	 * init callback is used for board specific initialization
 	 * e.g on Aspenite its used to initialize the PHY transceiver.
 	 */
 	int (*init)(void);
+	int (*device_mac)(u8 *mac_addr);
 };
 
 #endif /* __LINUX_PXA168_ETH_H */
