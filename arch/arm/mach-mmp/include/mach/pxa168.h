@@ -42,6 +42,10 @@ extern struct pxa_device_desc pxa168_device_sdh1;
 extern struct pxa_device_desc pxa168_device_sdh2;
 extern struct pxa_device_desc pxa168_device_sdh3;
 extern struct pxa_device_desc pxa168_device_sdh4;
+extern struct platform_device pxa168_device_u2o;
+extern struct platform_device pxa168_device_u2h;
+extern struct platform_device pxa168_device_u2oehci;
+extern struct platform_device pxa168_device_u2ootg;
 /* pdata can be NULL */
 extern int __init pxa168_add_usb_host(struct mv_usb_platform_data *pdata);
 

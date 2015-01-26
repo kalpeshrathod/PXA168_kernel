@@ -173,6 +173,56 @@ static void __init select_disp_freq(void)
 	}
 }
 
+#ifdef CONFIG_USB_SUPPORT
+
+#if defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_EHCI_MV)
+
+static char *pxa168_u2h_clock_name[] = {
+	[0] = "U2HCLK",
+};
+
+static struct mv_usb_platform_data pxa168_u2h_pdata = {
+	.mode           = MV_USB_MODE_HOST,
+	.phy_init       = pxa_usb_phy_init,
+	.phy_deinit     = pxa_usb_phy_deinit,
+	.set_vbus       = NULL,
+};
+#endif
+
+#if defined(CONFIG_USB_MV_UDC) || defined(CONFIG_USB_EHCI_MV_U2O)
+static char *pxa168_u2o_clock_name[] = {
+	[0] = "U2OCLK",
+};
+
+static struct mv_usb_platform_data pxa168_u2o_udc_pdata = {
+	.vbus			= NULL,
+	.mode			= MV_USB_MODE_OTG,
+	.otg_force_a_bus_req	= 1,
+	.phy_init		= pxa_usb_phy_init,
+	.phy_deinit		= pxa_usb_phy_deinit,
+	.set_vbus		= NULL,
+};
+static struct mv_usb_platform_data pxa168_u2o_pdata = {
+	.vbus			= NULL,
+	.mode			= MV_USB_MODE_OTG,
+	.otg_force_a_bus_req	= 1,
+	.phy_init		= pxa_usb_phy_init,
+	.phy_deinit		= pxa_usb_phy_deinit,
+	.set_vbus		= NULL,
+};
+static struct mv_usb_platform_data pxa168_u2o_otg_pdata = {
+	.vbus			= NULL,
+	.mode			= MV_USB_MODE_OTG,
+	.otg_force_a_bus_req	= 1,
+	.phy_init		= pxa_usb_phy_init,
+	.phy_deinit		= pxa_usb_phy_deinit,
+
+	.set_vbus		= NULL,
+};
+
+#endif
+#endif
+
 static struct pxa2xx_spi_master pxa_ssp_master_info = {
 	.num_chipselect	= 1,
 	.enable_dma = 1,
@@ -339,6 +389,20 @@ static void __init gplugd_init(void)
 
 	pxa168_add_sdh(1, &gplugd_sdh_platdata);
 	pxa168_add_sdh(2, &gplugd_sdh_platdata);
+
+#if defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_EHCI_MV)
+	pxa168_device_u2h.dev.platform_data = &pxa168_u2h_pdata;
+	platform_device_register(&pxa168_device_u2h);
+#endif
+#ifdef CONFIG_USB_MV_UDC
+	pxa168_device_u2o.dev.platform_data = &pxa168_u2o_udc_pdata;
+	platform_device_register(&pxa168_device_u2o);
+#endif
+
+#ifdef CONFIG_USB_EHCI_MV_U2O
+	pxa168_device_u2oehci.dev.platform_data = &pxa168_u2o_pdata;
+	platform_device_register(&pxa168_device_u2oehci);
+#endif
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
 }
