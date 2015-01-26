@@ -22,6 +22,8 @@
 #include <mach/irqs.h>
 #include <mach/pxa168.h>
 #include <mach/mfp-pxa168.h>
+#include <mach/regs-mpmu.h>
+#include <mach/regs-timers.h>
 
 #include <uapi/linux/ethtool.h>
 #include <linux/etherdevice.h>
@@ -365,6 +367,37 @@ static struct pxa168_eth_platform_data gplugd_eth_platform_data = {
 	.device_mac  = device_mac_address,
 };
 
+static void gplugd_restart(char mode, const char *cmd)
+{
+#define MPMU_APRR_WDTR	(1<<4)
+	volatile u32 watchdog_virt_base;
+
+	watchdog_virt_base = (u32)TIMERS1_VIRT_BASE;
+	/* negate hardware reset to the WDT after system reset */
+	writel((readl(MPMU_APRR) | MPMU_APRR_WDTR), MPMU_APRR);
+
+	/*disable functional WDT clock */
+	writel(0x1, MPMU_WDTPCR);
+
+	/* clear previous WDT status */
+	writel(0xbaba, (volatile void*)(watchdog_virt_base + TMR_WFAR));
+	writel(0xeb10, (volatile void*)(watchdog_virt_base + TMR_WSAR));
+	writel(0, (volatile void*)(watchdog_virt_base + TMR_WSR));
+
+	/* set match counter */
+	writel(0xbaba, (volatile void*)(watchdog_virt_base + TMR_WFAR));
+	writel(0xeb10, (volatile void*)(watchdog_virt_base + TMR_WSAR));
+	writel(0xf, (volatile void*)(watchdog_virt_base + TMR_WMR));
+
+	/* enable WDT reset */
+	writel(0xbaba, (volatile void*)(watchdog_virt_base + TMR_WFAR));
+	writel(0xeb10, (volatile void*)(watchdog_virt_base + TMR_WSAR));
+	writel(0x3, (volatile void*)(watchdog_virt_base + TMR_WMER));
+
+	/*enable functional WDT clock */
+	writel(0x3, MPMU_WDTPCR);
+}
+
 static void __init gplugd_init(void)
 {
 	mfp_config(ARRAY_AND_SIZE(gplugd_pin_config));
@@ -413,5 +446,5 @@ MACHINE_START(GPLUGD, "PXA168-based GuruPlug Display (gplugD) Platform")
 	.init_irq       = pxa168_init_irq,
 	.init_time	= pxa168_timer_init,
 	.init_machine   = gplugd_init,
-	.restart	= pxa168_restart,
+	.restart	= gplugd_restart,
 MACHINE_END
