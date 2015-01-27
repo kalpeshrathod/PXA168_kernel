@@ -867,6 +867,11 @@ static void handle_link_event(struct pxa168_eth_private *pep)
 	int speed;
 	int duplex;
 	int fc;
+	struct phy_device *phy = pep->phy;
+
+	printk(KERN_INFO "%s: link up, %d Mb/s, %s duplex, "
+	       "duplex value is %dabled\n", dev->name,
+	       phy->speed, phy->duplex ? "full" : "half", phy->duplex);
 
 	port_status = rdl(pep, PORT_STATUS);
 	if (!(port_status & LINK_UP)) {
@@ -1460,7 +1465,7 @@ static int pxa168_eth_probe(struct platform_device *pdev)
 			DRIVER_NAME);
 		return -ENODEV;
 	}
-	clk_enable(clk);
+	clk_prepare_enable(clk);
 
 	dev = alloc_etherdev(sizeof(struct pxa168_eth_private));
 	if (!dev) {
@@ -1492,10 +1497,21 @@ static int pxa168_eth_probe(struct platform_device *pdev)
 
 	INIT_WORK(&pep->tx_timeout_task, pxa168_eth_tx_timeout_task);
 
-	printk(KERN_INFO "%s:Using random mac address\n", DRIVER_NAME);
-	eth_hw_addr_random(dev);
-
 	pep->pd = dev_get_platdata(&pdev->dev);
+
+	if (pep->pd->init)
+		pep->pd->init();
+
+	if (pep->pd->device_mac)
+		pep->pd->device_mac(pep->pd->mac_addr);
+
+	if (is_valid_ether_addr(pep->pd->mac_addr)) {
+		memcpy(dev->dev_addr, pep->pd->mac_addr, 6);
+	} else {
+		printk(KERN_INFO "%s:Using random mac address\n", DRIVER_NAME);
+		eth_hw_addr_random(dev);
+	}
+
 	pep->rx_ring_size = NUM_RX_DESCS;
 	if (pep->pd->rx_queue_size)
 		pep->rx_ring_size = pep->pd->rx_queue_size;
@@ -1550,7 +1566,7 @@ err_base:
 err_netdev:
 	free_netdev(dev);
 err_clk:
-	clk_disable(clk);
+	clk_disable_unprepare(clk);
 	clk_put(clk);
 	return err;
 }
